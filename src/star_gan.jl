@@ -6,10 +6,10 @@ using NNlib: relu, leakyrelu
 using Base.Iterators: partition
 using Images: channelview
 
-include("data_loader.jl")
-BATCH_SIZE = 512
-train_data = load_dataset_as_batches("C:/Users/manju/Downloads/celeba-dataset/img_align_celeba/img_align_celeba/", BATCH_SIZE)
-train_data = gpu.(train_data)
+# include("data_loader.jl")
+# BATCH_SIZE = 512
+# train_data = load_dataset_as_batches("C:/Users/manju/Downloads/celeba-dataset/img_align_celeba/img_align_celeba/", BATCH_SIZE)
+# train_data = gpu.(train_data)
 
 struct ResidualBlock
   conv_layers
@@ -20,11 +20,11 @@ end
 @treelike ResidualBlock
 
 function ResidualBlock(filters, kernels::Array{Tuple{Int,Int}}, pads::Array{Tuple{Int,Int}}, strides::Array{Tuple{Int,Int}}, shortcut = identity)
-  local conv_layers = []
-  local norm_layers = []
+  local conv_layers = Array{Any, 1}(undef, length(filters) - 1)
+  local norm_layers = Array{Any, 1}(undef, length(filters) - 1)
   for i in 2:length(filters)
-    push!(conv_layers, Conv(kernels[i-1], filters[i-1]=>filters[i], pad = pads[i-1], stride = strides[i-1]))
-    push!(norm_layers, InstanceNorm(filters[i]))
+    conv_layers[i - 1] = Conv(kernels[i-1], filters[i-1]=>filters[i], pad = pads[i-1], stride = strides[i-1])
+    norm_layers[i - 1] = InstanceNorm(filters[i])
   end
   ResidualBlock(Tuple(conv_layers),Tuple(norm_layers),shortcut)
 end
