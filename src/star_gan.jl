@@ -6,11 +6,13 @@ using NNlib: relu, leakyrelu
 using Base.Iterators: partition
 using Images: channelview
 
-# include("data_loader.jl")
-# BATCH_SIZE = 512
-# train_data = load_dataset_as_batches("C:/Users/manju/Downloads/celeba-dataset/img_align_celeba/img_align_celeba/", BATCH_SIZE)
-# train_data = gpu.(train_data)
+include("data_loader.jl")
+BATCH_SIZE = 512
+train_data = load_dataset_as_batches("C:/Users/manju/Downloads/celeba-dataset/img_align_celeba/img_align_celeba/", BATCH_SIZE)
+train_data = gpu.(train_data)
 
+λ = 1
+γ = 10
 struct ResidualBlock
   conv_layers
   norm_layers
@@ -77,3 +79,33 @@ discriminator_logit = Chain(discriminator, Conv((2, 2), 2048=>1, stride = (1, 1)
 
 discriminator_classifier = Chain(discriminator, Conv((2, 2), 2048=>5, stride = (1, 1)),
                                     x -> reshape(x, 5, :))
+
+function gan_loss(X, Y)
+  logit = discriminator_logit(X)
+  return mean(logit .* (-Y) .+ log.(ones(size(logit)...) .+ exp.(logit)))
+end
+
+function cls_loss(X, Y)
+  class_probs = discriminator_classifier(X)
+  return mean(class_probs .*(-Y) .+ log.(ones(size(class_probs)...) .+ exp.(class_probs)))
+end
+
+function recon_loss(real_img, fake_img)
+  return mean(abs.(real_img - fake_img))
+end
+
+function discriminator_loss(X, target_class)
+  d_real_adv_loss = gan_loss(X, ones(1, 1, 1, 1))
+  d_fake_adv_loss = gan_loss(generator(X), zeros(1, 1, 1, 1))
+  d_adv_loss = d_real_adv_loss + d_fake_adv_loss
+  d_real_cls_loss = cls_loss(X, target_class)
+  return d_adv_loss + λ * d_real_cls_loss
+end
+
+function generator_loss(X, target_class)
+  fake_img = generator(X)
+  g_adv_loss = gan_loss(fake_img, ones(1, 1, 1, 1))
+  g_fake_cls_loss = cls_loss(fake_img, target_class)
+  g_recon_loss = recon_loss(X, fake_img)
+  return g_adv_loss + λ * g_fake_cls_loss + γ * g_recon_loss
+end
