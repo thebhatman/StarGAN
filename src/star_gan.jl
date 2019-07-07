@@ -25,7 +25,7 @@ for row in attr_file
 end
 batched_labels = []
 for x in partition(labels, BATCH_SIZE)
-  push!(batched_labels, x)
+  push!(batched_labels, cat(x..., dims = 2))
 end
 
 λ = 1
