@@ -8,13 +8,24 @@ using Images: channelview
 using CSV
 
 # include("data_loader.jl")
-# BATCH_SIZE = 512
+BATCH_SIZE = 512
+training_set_size = 512 * 395
 # train_data = load_dataset_as_batches("C:/Users/manju/Downloads/celeba-dataset/img_align_celeba/img_align_celeba/", BATCH_SIZE)
 # train_data = gpu.(train_data)
 attr_file = CSV.File("C:/Users/manju/Downloads/celeba-dataset/list_attr_celeba.csv")
-labels = []
+labels = Array{Array{Float64, 1}, 1}(undef, training_set_size)
+i = 0
 for row in attr_file
-  push!(labels, ([row.Black_Hair, row.Blond_Hair, row.Brown_Hair, row.Male, row.Young] .+ 1)/2)
+  global i += 1
+  labels[i] = ([row.Black_Hair, row.Blond_Hair, row.Brown_Hair, row.Male, row.Young] .+ 1)/2
+  # push!(labels, ([row.Black_Hair, row.Blond_Hair, row.Brown_Hair, row.Male, row.Young] .+ 1)/2)
+  if i == training_set_size
+    break
+  end
+end
+batched_labels = []
+for x in partition(labels, BATCH_SIZE)
+  push!(batched_labels, x)
 end
 
 λ = 1
