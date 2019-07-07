@@ -5,11 +5,17 @@ using Flux:@treelike
 using NNlib: relu, leakyrelu
 using Base.Iterators: partition
 using Images: channelview
+using CSV
 
-include("data_loader.jl")
-BATCH_SIZE = 512
-train_data = load_dataset_as_batches("C:/Users/manju/Downloads/celeba-dataset/img_align_celeba/img_align_celeba/", BATCH_SIZE)
-train_data = gpu.(train_data)
+# include("data_loader.jl")
+# BATCH_SIZE = 512
+# train_data = load_dataset_as_batches("C:/Users/manju/Downloads/celeba-dataset/img_align_celeba/img_align_celeba/", BATCH_SIZE)
+# train_data = gpu.(train_data)
+attr_file = CSV.File("C:/Users/manju/Downloads/celeba-dataset/list_attr_celeba.csv")
+labels = []
+for row in attr_file
+  push!(labels, ([row.Black_Hair, row.Blond_Hair, row.Brown_Hair, row.Male, row.Young] .+ 1)/2)
+end
 
 λ = 1
 γ = 10
