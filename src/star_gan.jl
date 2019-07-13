@@ -112,8 +112,8 @@ function recon_loss(real_img, fake_img)
 end
 
 function discriminator_loss(X, target_class)
-  d_real_adv_loss = gan_loss(X, ones(1, 1, 1, 1))
-  d_fake_adv_loss = gan_loss(generator(X), zeros(1, 1, 1, 1))
+  d_real_adv_loss = gan_loss(X, ones(1, 1, 1, BATCH_SIZE))
+  d_fake_adv_loss = gan_loss(generator(X), zeros(1, 1, 1, BATCH_SIZE))
   d_adv_loss = d_real_adv_loss + d_fake_adv_loss
   d_real_cls_loss = cls_loss(X, target_class)
   return d_adv_loss + λ * d_real_cls_loss
@@ -121,8 +121,23 @@ end
 
 function generator_loss(X, target_class)
   fake_img = generator(X)
-  g_adv_loss = gan_loss(fake_img, ones(1, 1, 1, 1))
+  g_adv_loss = gan_loss(fake_img, ones(1, 1, 1, BATCH_SIZE))
   g_fake_cls_loss = cls_loss(fake_img, target_class)
   g_recon_loss = recon_loss(X, fake_img)
   return g_adv_loss + λ * g_fake_cls_loss + γ * g_recon_loss
 end
+
+opt_disc = ADAM()
+opt_gen = ADAM()
+
+function training(X)
+  target_labels = rand([1 0 0 1 1], 5, BATCH_SIZE)
+  disc_grads = Tracker.gradient(()->discriminator_loss(X[1], X[2]), params(params(discriminator_logit)..., params(discriminator_classifier)...))
+  Flux.Optimise.update!(opt_disc, params(params(discriminator_logit)..., params(discriminator_classifier)...), disc_grads)
+
+  gen_grads = Tracker.gradient(()->generator_loss(X[1], target_labels), params(generator))
+  Flux.Optimise.update!(opt_gen, params(generator), gen_grads)
+  
+  return discriminator_loss(X, target_labels), generator_loss(X, target_labels)
+end
+
