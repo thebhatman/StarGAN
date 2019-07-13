@@ -10,9 +10,9 @@ using CSV
 # include("data_loader.jl")
 BATCH_SIZE = 512
 training_set_size = 512 * 395
-# train_data = load_dataset_as_batches("C:/Users/manju/Downloads/celeba-dataset/img_align_celeba/img_align_celeba/", BATCH_SIZE)
+# train_data = load_dataset_as_batches("../celeba-dataset/img_align_celeba/img_align_celeba/", BATCH_SIZE)
 # train_data = gpu.(train_data)
-attr_file = CSV.File("C:/Users/manju/Downloads/celeba-dataset/list_attr_celeba.csv")
+attr_file = CSV.File("../celeba-dataset/list_attr_celeba.csv")
 labels = Array{Array{Float64, 1}, 1}(undef, training_set_size)
 i = 0
 for row in attr_file
@@ -140,4 +140,36 @@ function training(X)
   
   return discriminator_loss(X, target_labels), generator_loss(X, target_labels)
 end
+
+function save_weights(discriminator_logit, discriminator_classifier, generator)
+  discriminator_logit = discriminator_logit |> cpu
+  discriminator_classifier = discriminator_classifier |> cpu
+  generator = generator |> cpu
+  @save "../weights/discriminator_logit.bson" discriminator_logit
+  @save "../weights/discriminator_classifier.bson" discriminator_classifier
+  @save "../weights/generator.bson" generator
+  discriminator_logit = discriminator_logit |> gpu
+  discriminator_classifier = discriminator_classifier |> gpu
+  generator = generator |> gpu
+end
+
+NUM_EPOCHS = 50
+
+function train()
+  i = 0
+  for epoch in 1:NUM_EPOCHS
+    println("---------------EPOCH : $epoch----------------")
+    for d in zip(train_data, batched_labels)
+      disc_loss, generator_loss = training(d)
+      println("Discriminator loss : $disc_loss, Generator loss : $generator_loss")
+      i += 1
+      if(i % 1000)
+        save_weights(discriminator_logit, discriminator_classifier, generator)
+      end
+    end
+  end
+end
+
+
+
 
