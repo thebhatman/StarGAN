@@ -6,12 +6,15 @@ using NNlib: relu, leakyrelu
 using Base.Iterators: partition
 using Images: channelview
 using CSV
+using BSON: @save
+using CuArrays
+using CUDAnative:exp, log
 
-# include("data_loader.jl")
+include("data_loader.jl")
 BATCH_SIZE = 512
 training_set_size = 512 * 395
-# train_data = load_dataset_as_batches("../celeba-dataset/img_align_celeba/img_align_celeba/", BATCH_SIZE)
-# train_data = gpu.(train_data)
+train_data = load_dataset_as_batches("../celeba-dataset/img_align_celeba/img_align_celeba/", BATCH_SIZE)
+train_data = gpu.(train_data)
 attr_file = CSV.File("../celeba-dataset/list_attr_celeba.csv")
 labels = Array{Array{Float64, 1}, 1}(undef, training_set_size)
 i = 0
@@ -77,7 +80,7 @@ generator = Chain(Conv((7, 7), 3 => 64, stride = (1, 1), pad = (3, 3)),
                 ConvTranspose((4, 4), 128=>64, stride = (2, 2), pad = (1, 1)),
                 InstanceNorm(64),
                 Conv((7, 7), 64=>3, stride = (1, 1), pad = (3, 3)),
-                x -> tanh.(x))
+                x -> tanh.(x)) |> gpu
 
 discriminator = Chain(Conv((4, 4), 3=>64, stride = (2, 2), pad = (1, 1)),
                     x -> leakyrelu.(x, 0.01),
@@ -90,12 +93,12 @@ discriminator = Chain(Conv((4, 4), 3=>64, stride = (2, 2), pad = (1, 1)),
                     Conv((4, 4), 512=>1024, stride = (2, 2), pad = (1, 1)),
                     x -> leakyrelu.(x, 0.01),
                     Conv((4, 4), 1024=>2048, stride = (2, 2), pad = (1, 1)),
-                    x -> leakyrelu.(x, 0.01))
+                    x -> leakyrelu.(x, 0.01)) |> gpu
 
-discriminator_logit = Chain(discriminator, Conv((2, 2), 2048=>1, stride = (1, 1)))
+discriminator_logit = Chain(discriminator, Conv((2, 2), 2048=>1, stride = (1, 1))) |> gpu
 
 discriminator_classifier = Chain(discriminator, Conv((2, 2), 2048=>5, stride = (1, 1)),
-                                    x -> reshape(x, 5, :))
+                                    x -> reshape(x, 5, :)) |> gpu
 
 function gan_loss(X, Y)
   logit = discriminator_logit(X)
@@ -160,7 +163,7 @@ function train()
   for epoch in 1:NUM_EPOCHS
     println("---------------EPOCH : $epoch----------------")
     for d in zip(train_data, batched_labels)
-      disc_loss, generator_loss = training(d)
+      disc_loss, generator_loss = training(d |> gpu)
       println("Discriminator loss : $disc_loss, Generator loss : $generator_loss")
       i += 1
       if(i % 1000)
