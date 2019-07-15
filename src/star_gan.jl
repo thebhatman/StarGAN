@@ -166,7 +166,7 @@ function train()
       disc_loss, generator_loss = training(d |> gpu)
       println("Discriminator loss : $disc_loss, Generator loss : $generator_loss")
       i += 1
-      if(i % 1000)
+      if i % 1000 == 0
         save_weights(discriminator_logit, discriminator_classifier, generator)
       end
     end
