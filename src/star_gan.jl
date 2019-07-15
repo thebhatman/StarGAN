@@ -13,9 +13,9 @@ using CUDAnative:exp, log
 include("data_loader.jl")
 BATCH_SIZE = 512
 training_set_size = 512 * 395
-train_data = load_dataset_as_batches("../celeba-dataset/img_align_celeba/img_align_celeba/", BATCH_SIZE)
+train_data = load_dataset_as_batches("/home/thebhatman/Downloads/celeba-dataset/img_align_celeba/", BATCH_SIZE)
 train_data = gpu.(train_data)
-attr_file = CSV.File("../celeba-dataset/list_attr_celeba.csv")
+attr_file = CSV.File("/home/thebhatman/Downloads/celeba-dataset/list_attr_celeba.csv")
 labels = Array{Array{Float64, 1}, 1}(undef, training_set_size)
 i = 0
 for row in attr_file
