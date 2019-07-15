@@ -31,8 +31,8 @@ for x in partition(labels, BATCH_SIZE)
   push!(batched_labels, cat(x..., dims = 2))
 end
 
-λ = 1
-γ = 10
+λ = 1.0f0
+γ = 10.0f0
 struct ResidualBlock
   conv_layers
   norm_layers
