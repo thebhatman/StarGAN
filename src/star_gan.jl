@@ -13,9 +13,9 @@ using CUDAnative:exp, log
 include("data_loader.jl")
 BATCH_SIZE = 512
 training_set_size = 512 * 395
-train_data = load_dataset_as_batches("/home/thebhatman/Downloads/celeba-dataset/img_align_celeba/", BATCH_SIZE)
+train_data = load_dataset_as_batches("/home/thebhatman/StarGAN/img_align_celeba/", BATCH_SIZE)
 train_data = gpu.(train_data)
-attr_file = CSV.File("/home/thebhatman/Downloads/celeba-dataset/list_attr_celeba.csv")
+attr_file = CSV.File("/home/thebhatman/StarGAN/list_attr_celeba.csv")
 labels = Array{Array{Float64, 1}, 1}(undef, training_set_size)
 i = 0
 for row in attr_file
@@ -31,8 +31,8 @@ for x in partition(labels, BATCH_SIZE)
   push!(batched_labels, cat(x..., dims = 2))
 end
 
-λ = 1
-γ = 10
+λ = 1.0f0
+γ = 10.0f0
 struct ResidualBlock
   conv_layers
   norm_layers
@@ -115,8 +115,8 @@ function recon_loss(real_img, fake_img)
 end
 
 function discriminator_loss(X, target_class)
-  d_real_adv_loss = gan_loss(X, ones(1, 1, 1, BATCH_SIZE))
-  d_fake_adv_loss = gan_loss(generator(X), zeros(1, 1, 1, BATCH_SIZE))
+  d_real_adv_loss = gan_loss(X, ones(1, 1, 1, BATCH_SIZE) |> gpu)
+  d_fake_adv_loss = gan_loss(generator(X), zeros(1, 1, 1, BATCH_SIZE) |> gpu)
   d_adv_loss = d_real_adv_loss + d_fake_adv_loss
   d_real_cls_loss = cls_loss(X, target_class)
   return d_adv_loss + λ * d_real_cls_loss
@@ -124,7 +124,7 @@ end
 
 function generator_loss(X, target_class)
   fake_img = generator(X)
-  g_adv_loss = gan_loss(fake_img, ones(1, 1, 1, BATCH_SIZE))
+  g_adv_loss = gan_loss(fake_img, ones(1, 1, 1, BATCH_SIZE) |> gpu)
   g_fake_cls_loss = cls_loss(fake_img, target_class)
   g_recon_loss = recon_loss(X, fake_img)
   return g_adv_loss + λ * g_fake_cls_loss + γ * g_recon_loss
@@ -134,7 +134,7 @@ opt_disc = ADAM()
 opt_gen = ADAM()
 
 function training(X)
-  target_labels = rand([1 0 0 1 1], 5, BATCH_SIZE)
+  target_labels = rand([1 0 0 1 1], 5, BATCH_SIZE) |> gpu
   disc_grads = Tracker.gradient(()->discriminator_loss(X[1], X[2]), params(params(discriminator_logit)..., params(discriminator_classifier)...))
   Flux.Optimise.update!(opt_disc, params(params(discriminator_logit)..., params(discriminator_classifier)...), disc_grads)
 
@@ -173,6 +173,6 @@ function train()
   end
 end
 
-
+train()
 
 
