@@ -102,12 +102,12 @@ discriminator_classifier = Chain(discriminator, Conv((2, 2), 2048=>5, stride = (
 
 function gan_loss(X, Y)
   logit = discriminator_logit(X)
-  return mean(logit .* (-Y) .+ log.(ones(size(logit)...) .+ exp.(logit)))
+  return mean(logit .* (-Y) .+ log.(ones(size(logit)...) |> gpu .+ exp.(logit)))
 end
 
 function cls_loss(X, Y)
   class_probs = discriminator_classifier(X)
-  return mean(class_probs .*(-Y) .+ log.(ones(size(class_probs)...) .+ exp.(class_probs)))
+  return mean(class_probs .*(-Y) .+ log.(ones(size(class_probs)...) |> gpu .+ exp.(class_probs)))
 end
 
 function recon_loss(real_img, fake_img)
